@@ -1,0 +1,12 @@
+{
+  "source_directories": [
+    "backend"
+  ],
+  "python_version": "3.9",
+  "search_path": [
+    "/Users/ankitdash/aspect folders/sectorperformance/.venv/lib/python3.9/site-packages"
+  ],
+  "exclude": [
+    ".*/node_modules/.*"
+  ]
+}
