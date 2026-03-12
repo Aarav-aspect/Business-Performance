@@ -99,7 +99,7 @@ const BigInsight = ({ content }) => (
 // --- Chart Option Generators ---
 
 const getSalesOption = ({ salesView, data }) => ({
-  tooltip: { 
+  tooltip: {
     trigger: 'axis',
     formatter: (p) => {
       const d = p[0];
@@ -141,7 +141,7 @@ const getSalesOption = ({ salesView, data }) => ({
 });
 
 const getCollectionsTrendOption = ({ data }) => ({
-  tooltip: { 
+  tooltip: {
     trigger: 'axis',
     formatter: (p) => {
       const d = p[0];
@@ -228,7 +228,7 @@ const getAgingOption = ({ data }) => {
   const values = categories.map(cat => buckets[cat] || 0);
 
   return {
-    tooltip: { 
+    tooltip: {
       trigger: 'axis',
       formatter: (p) => {
         const d = p[0];
@@ -260,7 +260,7 @@ const getAgingOption = ({ data }) => {
 const getAJVOption = ({ data }) => {
   const ajvData = data.out?.ajv || [];
   return {
-    tooltip: { 
+    tooltip: {
       trigger: 'axis',
       formatter: (p) => {
         const d = p[0];
@@ -296,7 +296,7 @@ const getByTradeOption = ({ data, drilldownTrade, selectedJobType }) => {
 
   let sortedTrades = [...rawData].sort((a, b) => a.value - b.value);
   return {
-    tooltip: { 
+    tooltip: {
       trigger: 'axis',
       formatter: (p) => {
         const d = p[0];
@@ -338,7 +338,7 @@ const getJobTypeOption = ({ data, donutDrill }) => {
   const total = fmtData.reduce((a, b) => a + b.value, 0);
 
   return {
-    tooltip: { 
+    tooltip: {
       trigger: 'item',
       formatter: (p) => {
         const val = p.value;
@@ -393,7 +393,7 @@ const getSASummaryOption = ({ summaryData }) => {
   const existing_cust = summaryData.existing || 0;
 
   return {
-    tooltip: { 
+    tooltip: {
       trigger: 'item',
       formatter: (p) => `${p.marker} ${p.name}: <b>${Math.round(p.value)}</b> (${Math.round(p.percent)}%)`
     },
@@ -457,7 +457,7 @@ const getSATradesOption = ({ data }) => {
   const sorted = [...trades].sort((a, b) => b.value - a.value).slice(0, 10);
 
   return {
-    tooltip: { 
+    tooltip: {
       trigger: 'axis',
       formatter: (p) => {
         const d = p[0];
@@ -494,7 +494,7 @@ const getJobTypeSalesOption = ({ data }) => {
   const fixed = srcData.find(d => d.name === 'Fixed Price') || { sales: 0 };
 
   return {
-    tooltip: { 
+    tooltip: {
       trigger: 'axis',
       formatter: (p) => {
         return `${p[0].name}<br/>` + p.map(d => `${d.marker} ${d.seriesName}: <b>£${Math.round(d.value / 1000)}k</b>`).join('<br/>');
@@ -575,7 +575,7 @@ const App = () => {
       <main className="main-viewport" style={{ paddingBottom: '60px' }}>
         <header className="dashboard-header">
           <img src="/Aspect_Logo.svg" alt="Aspect Logo" style={{ height: '28px' }} />
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="header-controls">
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -625,13 +625,14 @@ const App = () => {
         <div className="kpi-grid">
           <KPICard label="Total Invoices " value={data.sum.invoice_count.value} trend={data.sum.invoice_count.trend} color={COLORS.blue} />
           <KPICard label="Net Sales" value={data.sum.net_sales.value} trend={data.sum.net_sales.trend} color={COLORS.purple} />
+          <KPICard label="Total Credit" value={data.sum.total_credit?.value || "£0"} trend={data.sum.total_credit?.trend || "MTD Credit"} color={COLORS.teal} />
           <KPICard label="Outstanding" value={data.sum.outstanding_amount.value} trend={data.sum.outstanding_amount.trend} color={COLORS.pink} />
         </div>
 
         <div className="view-container">
           <section className="dashboard-section">
             <h2 className="section-title-main"><TrendingUp size={32} /> Sales & Collections Performance</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '7fr 3fr', gap: '12px' }}>
+            <div className="sales-grid">
               <div className="chart-card">
                 <div className="card-header">
                   <div className="card-title"></div>
@@ -657,7 +658,7 @@ const App = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="split-grid">
               <div className="chart-card" style={{ minHeight: 'auto' }}>
                 <div className="card-header">
                   <div className="card-title">{drilldownTrade ? "Breakdown by Trades" : "Sales Breakdown by Trade Groups"}</div>
@@ -674,7 +675,7 @@ const App = () => {
 
           <section className="dashboard-section">
             <h2 className="section-title-main"><Briefcase size={32} /> Operational Insights</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px' }}>
+            <div className="ops-grid">
               <div className="chart-card">
                 <div className="card-header"><div className="card-title">AJV Trend</div></div>
                 <ReactECharts option={getAJVOption({ data })} theme={theme} style={{ height: '300px' }} />
@@ -689,6 +690,21 @@ const App = () => {
               <div className="chart-card">
                 <div className="card-header"><div className="card-title">Job Type Revenue</div></div>
                 <ReactECharts option={getJobTypeSalesOption({ data })} theme={theme} style={{ height: '300px' }} />
+                {(() => {
+                  const srcData = data.sas?.month_split || [];
+                  const reactive = srcData.find(d => d.name === 'Reactive')?.sales || 0;
+                  const fixed = srcData.find(d => d.name === 'Fixed Price')?.sales || 0;
+                  const total = reactive + fixed;
+                  if (total === 0) return null;
+
+                  const dominant = reactive >= fixed ? 'Reactive' : 'Fixed Price';
+                  const domValue = Math.max(reactive, fixed);
+                  const percentage = Math.round((domValue / total) * 100);
+
+                  return (
+                    <InsightCapsule content={`${dominant} jobs make up the majority of revenue this month, accounting for ${percentage}% of total job type sales (£${Math.round(domValue / 1000)}k).`} />
+                  );
+                })()}
               </div>
             </div>
           </section>
@@ -698,7 +714,7 @@ const App = () => {
           <section className="dashboard-section">
             <h2 className="section-title-main"><Users size={32} /> Service Appointments</h2>
             {insights.review_rating && <BigInsight content={insights.review_rating} />}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '12px', marginTop: '12px' }}>
+            <div className="sa-grid">
               <div className="chart-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
                   <div className="card-title" style={{ fontSize: '13px', color: COLORS.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Today's Activity</div>
@@ -710,7 +726,7 @@ const App = () => {
                 </div>
               </div>
               <div className="chart-card">
-                <div className="card-header"><div className="card-title">Monthly Breakdown by Trade Groups</div></div>
+                <div className="card-header"><div className="card-title">Monthly SA Breakdown by Trade Groups</div></div>
                 <ReactECharts option={getSATradesOption({ data })} theme={theme} style={{ height: '320px' }} />
                 <InsightCapsule content={insights.top_trade_sa} />
               </div>

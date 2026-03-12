@@ -49,11 +49,13 @@ async def get_summary():
                 "invoice_count": {"value": f"{inv_count:,}", "trend": "↑ Live", "sparkline": [40, 45, 42, 48, 50, 45, 55, 60, 58, 62, 65, 70]},
                 "net_sales": {"value": f"£{net_sales:,.2f}", "trend": "↑ Live", "sparkline": [1.2, 1.4, 1.3, 1.6, 1.8, 1.7, 2.0, 2.2, 2.1, 2.3, 2.5, 2.2]},
                 "outstanding_amount": {"value": f"£{month_outstanding:,.2f}", "trend": "MTD Balance", "sparkline": [900, 850, 880, 820, 800, 780, 810, 840, 820, 850, 880, 890]},
+                "total_credit": {"value": f"£{cred_total:,.2f}", "trend": "MTD Credit", "sparkline": [100, 120, 110, 105, 115, 130, 125, 140, 135, 150, 145, 160]},
                 "target": f"£{net_sales:,.0f}",
                 "net_sales_raw": net_sales,
                 "net_billed_raw": inv_total,
                 "progress": int((collected / net_sales) * 100) if net_sales > 0 else 0
             }
+
     except Exception as e:
         print(f"SF Summary Error: {e}")
         import traceback
@@ -64,6 +66,7 @@ async def get_summary():
         "invoice_count": {"value": "3,819", "trend": "↑ Mock", "sparkline": [40, 45, 42, 48, 50, 45, 55, 60, 58, 62, 65, 70]},
         "net_sales": {"value": "£2,235,930.19", "trend": "↑ Mock", "sparkline": [1.2, 1.4, 1.3, 1.6, 1.8, 1.7, 2.0, 2.2, 2.1, 2.3, 2.5, 2.2]},
         "outstanding_amount": {"value": "£889,895.83", "trend": "↓ Mock", "sparkline": [900, 850, 880, 820, 800, 780, 810, 840, 820, 850, 880, 890]},
+        "total_credit": {"value": "£120,450.00", "trend": "↑ Mock", "sparkline": [100, 120, 110, 105, 115, 130, 125, 140, 135, 150, 145, 160]},
         "target": "£1,200,000",
         "net_sales_raw": 889000,
         "net_billed_raw": 2235930.19,
