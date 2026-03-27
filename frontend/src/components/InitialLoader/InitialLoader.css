@@ -1,0 +1,86 @@
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #f8f7ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.loader-logo {
+    height: 28px;
+    animation: pulse 1.2s infinite ease-out;
+}
+
+.loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: auto;
+    min-width: 280px;
+    gap: 0.75rem;
+}
+
+.loader-progress-wrapper {
+    width: 100%;
+    height: 4px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loader-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30%;
+    background: #6366f1;
+    border-radius: 10px;
+    animation: slide 2.5s infinite ease-in-out;
+}
+
+.loader-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+@keyframes slide {
+    0% {
+        left: -30%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
