@@ -155,14 +155,16 @@ class WorldViewCache:
 
             invoices = self._fetch_invoices()
             credits = self._fetch_credits()
+            chargebacks = self._fetch_chargebacks()
             payments = self._fetch_payments()
             sas = self._fetch_service_appointments()
             outstanding = self._fetch_outstanding_invoices()
+            wip = self._fetch_wip()
 
             elapsed = round(time.time() - t0, 1)
             rows = {k: len(v) for k, v in [
-                ('invoices', invoices), ('credits', credits),
-                ('payments', payments), ('sas', sas), ('outstanding', outstanding)
+                ('invoices', invoices), ('credits', credits), ('chargebacks', chargebacks),
+                ('payments', payments), ('sas', sas), ('outstanding', outstanding), ('wip', wip)
             ]}
             print(f"[WorldViewCache] Loaded in {elapsed}s — rows: {rows}")
 
@@ -170,9 +172,11 @@ class WorldViewCache:
                 self._data = {
                     'invoices': invoices,
                     'credits': credits,
+                    'chargebacks': chargebacks,
                     'payments': payments,
                     'sas': sas,
                     'outstanding': outstanding,
+                    'wip': wip,
                 }
                 self._loaded_at = time.time()
         except Exception:
@@ -192,12 +196,14 @@ class WorldViewCache:
                    Site_Postal_Code__c, Balance_Outstanding__c, Sum_of_Payments__c,
                    Interest_Fee_Owed__c, Interest_Fee_Received__c,
                    Job__c, Type__c, Job_Trade__c,
-                   Account__r.Account_Type__c, Account__r.DRC_Applies__c
+                   Account__r.Account_Type__c, Account__r.DRC_Applies__c,
+                   Account__r.Name
             FROM Customer_Invoice__c
-            WHERE (Date__c = LAST_N_MONTHS:13 OR Date__c = THIS_MONTH)
+            WHERE (Date__c = LAST_N_MONTHS:16 OR Date__c = THIS_MONTH)
             AND Chumley_Test_Record__c = False
             AND Account__r.Account_Type__c NOT IN ('Key Account', 'Key Accounts')
             AND (NOT Sector_Type__c LIKE '%Insurance%')
+            AND (NOT Sector_Type__c LIKE '%Key%')
         """
         records = self._sf.query_all(query).get('records', [])
         df = _records_to_df(records)
@@ -208,6 +214,7 @@ class WorldViewCache:
         df = df.rename(columns={
             'account_Account_Type__c': 'account_type',
             'account_DRC_Applies__c': 'drc_applies',
+            'account_Name': 'account_name',
         })
         # Coerce numeric
         for col in ['Charge_Net__c', 'Balance_Outstanding__c', 'Sum_of_Payments__c',
@@ -220,7 +227,7 @@ class WorldViewCache:
 
     def _fetch_credits(self) -> pd.DataFrame:
         query = """
-            SELECT Id, Name, Date__c, Charge_Net__c,
+            SELECT Id, Name, CreatedDate, Charge_Net__c,
                    Customer_Invoice__r.Name,
                    Customer_Invoice__r.Date__c,
                    Customer_Invoice__r.Sector_Type__c,
@@ -229,9 +236,10 @@ class WorldViewCache:
                    Customer_Invoice__r.Job_Trade__c,
                    Customer_Invoice__r.Account__r.Account_Type__c
             FROM Customer_Credit_Note__c
-            WHERE (Date__c = LAST_N_MONTHS:13 OR Date__c = THIS_MONTH)
+            WHERE (CreatedDate = LAST_N_MONTHS:16 OR CreatedDate = THIS_MONTH)
             AND Customer_Invoice__r.Account__r.Account_Type__c NOT IN ('Key Account', 'Key Accounts')
             AND (NOT Customer_Invoice__r.Sector_Type__c LIKE '%Insurance%')
+            AND (NOT Customer_Invoice__r.Sector_Type__c LIKE '%Key%')
         """
         records = self._sf.query_all(query).get('records', [])
         df = _records_to_df(records)
@@ -259,8 +267,46 @@ class WorldViewCache:
             elif 'Account_Type' in c: col_map[c] = 'invoice_account_type'
         df = df.rename(columns=col_map)
         df['Charge_Net__c'] = pd.to_numeric(df['Charge_Net__c'], errors='coerce').fillna(0.0)
-        df = _add_year_month(df, 'Date__c')
+        df = _add_year_month(df, 'CreatedDate')
         # region from the invoice's postcode
+        if 'invoice_postcode' in df.columns:
+            df['region'] = df['invoice_postcode'].apply(lambda pc: postcode_to_region(_safe_postcode(pc)))
+        return df
+
+    def _fetch_chargebacks(self) -> pd.DataFrame:
+        query = """
+            SELECT Amount__c,
+                   Customer_Invoice__r.Name,
+                   Customer_Invoice__r.Sector_Type__c,
+                   Customer_Invoice__r.Job_Trade__c,
+                   Customer_Invoice__r.Site_Postal_Code__c
+            FROM Payment_Chargeback__c
+            WHERE (Date_of_Final_Decision__c = LAST_N_MONTHS:16
+                   OR Date_of_Final_Decision__c = THIS_MONTH)
+        """
+        records = self._sf.query_all(query).get('records', [])
+        df = _records_to_df(records)
+        if df.empty:
+            return df
+        if 'Customer_Invoice__r' in df.columns:
+            inv_expanded = df['Customer_Invoice__r'].apply(
+                lambda x: {k: v for k, v in x.items() if k != 'attributes'} if isinstance(x, dict) else {}
+            )
+            inv_df = pd.json_normalize(inv_expanded)
+            inv_df = inv_df[[c for c in inv_df.columns if 'attributes' not in c]]
+            inv_df.columns = ['inv_' + c for c in inv_df.columns]
+            df = df.drop(columns=['Customer_Invoice__r']).reset_index(drop=True)
+            df = pd.concat([df.reset_index(drop=True), inv_df.reset_index(drop=True)], axis=1)
+
+        col_map = {}
+        for c in df.columns:
+            if c == 'inv_Name': col_map[c] = 'invoice_name'
+            elif c == 'inv_Sector_Type__c': col_map[c] = 'invoice_sector'
+            elif c == 'inv_Job_Trade__c': col_map[c] = 'invoice_trade_group'
+            elif c == 'inv_Site_Postal_Code__c': col_map[c] = 'invoice_postcode'
+        df = df.rename(columns=col_map)
+        df['Amount__c'] = pd.to_numeric(df['Amount__c'], errors='coerce').fillna(0.0)
+        df = _add_year_month(df, 'Date_of_Final_Decision__c')
         if 'invoice_postcode' in df.columns:
             df['region'] = df['invoice_postcode'].apply(lambda pc: postcode_to_region(_safe_postcode(pc)))
         return df
@@ -276,10 +322,11 @@ class WorldViewCache:
                    Customer_Invoice__r.Site_Postal_Code__c,
                    Customer_Invoice__r.Account__r.Account_Type__c
             FROM asp04__Payment__c
-            WHERE (asp04__Payment_Date__c = LAST_N_MONTHS:13
+            WHERE (asp04__Payment_Date__c = LAST_N_MONTHS:16
                    OR asp04__Payment_Date__c = THIS_MONTH)
             AND Customer_Invoice__r.Account__r.Account_Type__c NOT IN ('Key Account', 'Key Accounts')
             AND (NOT Customer_Invoice__r.Sector_Type__c LIKE '%Insurance%')
+            AND (NOT Customer_Invoice__r.Sector_Type__c LIKE '%Key%')
         """
         records = self._sf.query_all(query).get('records', [])
         df = _records_to_df(records)
@@ -327,10 +374,11 @@ class WorldViewCache:
                    Job__r.Account__r.CreatedDate,
                    Job__r.Account__r.Name
             FROM ServiceAppointment
-            WHERE (ActualStartTime = LAST_N_MONTHS:13 OR ActualStartTime = THIS_MONTH)
+            WHERE (ActualStartTime = LAST_N_MONTHS:16 OR ActualStartTime = THIS_MONTH)
             AND Chumley_Test_Account__c = false
             AND Job__r.Account__r.Account_Type__c NOT IN ('Key Account', 'Key Accounts')
             AND (NOT Job__r.Sector_Type__c LIKE '%Insurance%')
+            AND (NOT Job__r.Sector_Type__c LIKE '%Key%')
         """
         records = self._sf.query_all(query).get('records', [])
         df = _records_to_df(records)
@@ -361,12 +409,44 @@ class WorldViewCache:
         df = _apply_region(df, 'PostalCode')
         return df
 
+    def _fetch_wip(self) -> pd.DataFrame:
+        """Work in progress — fixed price jobs scheduled this month that are not yet complete."""
+        query = """
+            SELECT Id, Status, SchedEndTime, Job_Number__c,
+                   Job__r.Charge_Net__c, Job__r.Charge_Deposit__c,
+                   Trade_Group__c, Job__r.Sector_Type__c, PostalCode
+            FROM ServiceAppointment
+            WHERE SchedEndTime = THIS_MONTH
+            AND Job_Type__c = 'Fixed Price'
+            AND Status NOT IN ('Visit complete', 'cancelled', 'Job Closure')
+            AND Job__r.Account__r.Account_Type__c != 'Key Account'
+        """
+        records = self._sf.query_all(query).get('records', [])
+        df = _records_to_df(records)
+        if df.empty:
+            return df
+        if 'Job__r' in df.columns:
+            job_expanded = df['Job__r'].apply(
+                lambda x: {k: v for k, v in x.items() if k != 'attributes'} if isinstance(x, dict) else {}
+            )
+            job_df = pd.json_normalize(job_expanded)
+            job_df = job_df[[c for c in job_df.columns if 'attributes' not in c]]
+            df = df.drop(columns=['Job__r']).reset_index(drop=True)
+            job_df = job_df.reset_index(drop=True)
+            df = pd.concat([df, job_df], axis=1)
+        df = _apply_region(df, 'PostalCode')
+        print(f"[WIP] {len(df)} rows, columns: {list(df.columns)}")
+        if not df.empty:
+            print(f"[WIP] Sample row: {df.iloc[0].to_dict()}")
+        return df
+
     def _fetch_outstanding_invoices(self) -> pd.DataFrame:
         """All open receivables — no date window filter."""
         query = """
-            SELECT Name, Date__c, Charge_Net__c, Sum_of_Payments__c,
+            SELECT Id, Name, Date__c, Charge_Net__c, Sum_of_Payments__c,
                    Interest_Fee_Owed__c, Interest_Fee_Received__c,
                    Account__r.Account_Type__c, Account__r.DRC_Applies__c,
+                   Account__r.Name,
                    Balance_Outstanding__c, Sector_Type__c, Site_Postal_Code__c,
                    Job_Trade__c
             FROM Customer_Invoice__c
@@ -382,6 +462,7 @@ class WorldViewCache:
         df = df.rename(columns={
             'account_Account_Type__c': 'account_type',
             'account_DRC_Applies__c': 'drc_applies',
+            'account_Name': 'account_name',
         })
         for col in ['Charge_Net__c', 'Sum_of_Payments__c', 'Interest_Fee_Owed__c',
                     'Interest_Fee_Received__c', 'Balance_Outstanding__c']:

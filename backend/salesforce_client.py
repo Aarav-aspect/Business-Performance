@@ -24,7 +24,7 @@ TRADE_SUBGROUPS = {
         "Electrical": ["Electrical", "Electrical Renewable"],
     },
     "Building Fabric": {
-        "Decoration": ["Decorating", "Plastering", "Tiling", "Wallpapering", "Multi", "Decoration"],
+        "Decoration": ["Decorating", "Plastering", "Tiling", "Wallpapering", "Multi", "Decoration", "Decoration Project"],
         "Roofing": ["Roofing/LeakDetection", "Roofing", "Roof Window & Gutter Cleaning", "Roofing/Leak Detection"],
         "Multi Trades": ["Windows & Doors", "Handyman", "Carpentry", "Flooring Trade", "Fencing",
                          "Brickwork & Paving", "Locksmithing", "Partition Walls & Ceilings", "Access", "Glazing"],
@@ -63,9 +63,6 @@ TRADE_SUBGROUPS = {
                      "Drainage (Tanker)", "Commercial Pumps", "Drainage (Septic Tanks)",
                      "Drainage", "Drainage Leak Detection"],
     },
-    "Utilities": {
-        "Utilities": ["Utilities", "Utilities - Blended - General Building", "Utilities - Blended - Drainage"]
-    }
 }
 
 TRADE_REVERSE_MAP: Dict[str, Tuple[str, str]] = {}
@@ -86,12 +83,18 @@ def _build_sector_clause(sectors=None, via_invoice_rel=False) -> str:
 
 class SalesforceClient:
     def __init__(self):
-        self.sf = Salesforce(
-            username=os.getenv("SF_USERNAME"),
-            password=os.getenv("SF_PASSWORD"),
-            security_token=os.getenv("SF_SECURITY_TOKEN"),
-            domain=os.getenv("SF_DOMAIN", "login")
-        )
+        self._sf = None
+
+    @property
+    def sf(self):
+        if self._sf is None:
+            self._sf = Salesforce(
+                username=os.getenv("SF_USERNAME"),
+                password=os.getenv("SF_PASSWORD"),
+                security_token=os.getenv("SF_SECURITY_TOKEN"),
+                domain=os.getenv("SF_DOMAIN", "login")
+            )
+        return self._sf
 
     def get_distinct_sectors(self) -> List[str]:
         """Fallback: fetch distinct sectors directly from Salesforce (used if world view unavailable)."""

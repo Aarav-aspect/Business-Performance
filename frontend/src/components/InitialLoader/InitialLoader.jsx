@@ -5,7 +5,7 @@ const InitialLoader = ({ text = "Initialising Dashboard" }) => {
     return (
         <div className="loader-overlay">
             <div className="loader-container">
-                <img src="/Aspect_Logo.svg" alt="Aspect Logo" className="loader-logo" />
+                <img src="/business-performance/Aspect_Logo.svg" alt="Aspect Logo" className="loader-logo" />
                 <div className="loader-content">
                     <div className="loader-progress-wrapper">
                         <div className="loader-progress-bar"></div>

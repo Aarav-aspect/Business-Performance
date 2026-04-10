@@ -14,3 +14,25 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+
+# 1. Set your project
+gcloud config set project business-performance-492812
+
+# 2. Enable required APIs
+gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com
+
+# 3. Build and deploy to Cloud Run (from project root)
+cd ~/Desktop/Archive/SectorPerformance
+
+gcloud run deploy business-performance \
+  --source . \
+  --region europe-west2 \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --cpu 2 \
+  --timeout 300 \
+  --set-env-vars SF_USERNAME=tech@aspect.co.uk,SF_PASSWORD=TuanIsTheBest12,SF_SECURITY_TOKEN=9AHwz5yyDyEP4NulU84JFJdl
+  ,SF_DOMAIN=login \
+  --min-instances 1 \
+  --port 8080

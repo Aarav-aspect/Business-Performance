@@ -1,0 +1,28 @@
+Trade Name                                                    Invoices  Payments
+--------------------------------------------------------------------------------
+(empty/null)                                                         0      4795
+Roofing/Leak Detection                                            1497      1555
+Utilities - Drying                                                  64        87
+Leak Detection Restoration Domestic Plumbing                        48        62
+Utilities - Project Managment                                       32        45
+Utilities - Project - Building Fabric                               15        37
+Utilities - Project - Leak Detection                                26        25
+Leak Detection Commercial Plumbing                                  21        26
+Utilities - Project - Drainage                                      10        35
+Leak Detection Restoration Domestic Central Heating                 21        24
+Utilities - Project - Electrical                                    12        26
+Utilities - Blended - Heating & Hot Water (Domestic)                17        17
+Utilities - Blended - Electrical                                    19        15
+Leak Detection Restoration Commercial Plumbing                       6         6
+Utilities - Project - Heating & Hot Water (Domestic)                 5         5
+Decoration Project                                                   6         2
+Leak Detection Restoration Domestic Drainage                         3         5
+Leak Detection HVAC                                                  3         3
+Utilities - Blended - Heating & Hot Water (Commercial)               2         3
+Insurance - Hire (Prices Available Upon Request)                     2         2
+Leak Monitoring                                                      1         1
+Vehicle repair                                                       0         2
+Insurance - Leak Detection                                           1         0
+Heating Renewable                                                    1         0
+Utilities - Project - Air Con, Ventilation & Refrigeration           0         1
+Insurance - Pest Control                                             0         1

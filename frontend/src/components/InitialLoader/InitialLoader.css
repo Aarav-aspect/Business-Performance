@@ -4,7 +4,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: #f8f7ff;
+    background: #eef1f6;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -35,7 +35,7 @@
 .loader-progress-wrapper {
     width: 100%;
     height: 4px;
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(39, 84, 157, 0.1);
     border-radius: 10px;
     overflow: hidden;
     position: relative;
@@ -47,7 +47,7 @@
     left: 0;
     height: 100%;
     width: 30%;
-    background: #6366f1;
+    background: #27549D;
     border-radius: 10px;
     animation: slide 2.5s infinite ease-in-out;
 }
